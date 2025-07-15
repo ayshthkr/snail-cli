@@ -24,6 +24,7 @@ git2 = "0.18"
 lettre = { version = "0.11", features = ["tokio1-native-tls", "smtp-transport", "builder"] }
 imap = "2.4"
 mail-parser = "0.8"
+native-tls = "0.2"
 
 # Terminal interface
 crossterm = "0.27"
@@ -48,3 +49,6 @@ keyring = "2.0"
 
 # Regular expressions
 regex = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"

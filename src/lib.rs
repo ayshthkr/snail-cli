@@ -10,7 +10,9 @@ pub mod filter;
 pub mod git_storage;
 pub mod models;
 pub mod parser;
+pub mod smtp_tests;
 pub mod sync;
+pub mod tui;
 
 pub use error::{GitMailError, Result};
 pub use git_storage::{DefaultGitStorage, GitStorage};

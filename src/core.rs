@@ -1,9 +1,48 @@
 //! Core application logic and orchestration
 
 use crate::error::Result;
-use crate::models::{Account, Email};
+use crate::git_storage::GitStorage;
+use crate::models::{Account, Email, EmailMetadata};
 
 /// Core application engine that orchestrates all components
+pub struct GitMailCore {
+    /// Git storage backend
+    storage: Box<dyn GitStorage>,
+}
+
+impl GitMailCore {
+    /// Create a new core engine instance with storage backend
+    pub fn new(storage: Box<dyn GitStorage>) -> Self {
+        Self { storage }
+    }
+
+    /// Initialize the Git-Mail repository
+    pub fn init_repository(&self, path: &str) -> Result<()> {
+        self.storage.initialize_repository(path)
+    }
+
+    /// List emails in a folder
+    pub fn list_emails(&self, folder: Option<&str>) -> Result<Vec<EmailMetadata>> {
+        self.storage.list_emails(folder)
+    }
+
+    /// Get a specific email by ID
+    pub fn get_email(&self, id: &str) -> Result<Email> {
+        self.storage.retrieve_email(id)
+    }
+
+    /// Store an email
+    pub fn store_email(&self, email: &Email) -> Result<String> {
+        self.storage.store_email(email)
+    }
+
+    /// Commit changes to the repository
+    pub fn commit_changes(&self, message: &str) -> Result<()> {
+        self.storage.commit_changes(message)
+    }
+}
+
+/// Legacy core engine for backward compatibility
 pub struct CoreEngine {
     // TODO: Add fields for storage, sync, filter engines
 }
