@@ -1,0 +1,50 @@
+[package]
+name = "git-mail"
+version = "0.1.0"
+edition = "2021"
+description = "Terminal-based, offline-first email client that stores emails as plain-text files in a Git repository"
+license = "MIT"
+
+[dependencies]
+# CLI argument parsing
+clap = { version = "4.0", features = ["derive"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Git operations
+git2 = "0.18"
+
+# Email handling
+lettre = { version = "0.11", features = ["tokio1-native-tls", "smtp-transport", "builder"] }
+imap = "2.4"
+mail-parser = "0.8"
+
+# Terminal interface
+crossterm = "0.27"
+ratatui = "0.24"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4"] }
+dirs = "5.0"
+tempfile = "3.0"
+
+# Secure credential storage
+keyring = "2.0"
+
+# Regular expressions
+regex = "1.0"
