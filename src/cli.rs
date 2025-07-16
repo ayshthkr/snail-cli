@@ -2,7 +2,9 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "git-mail")]
-#[command(about = "Terminal-based, offline-first email client that stores emails as plain-text files in a Git repository")]
+#[command(
+    about = "Terminal-based, offline-first email client that stores emails as plain-text files in a Git repository"
+)]
 #[command(version)]
 pub struct Cli {
     #[command(subcommand)]
@@ -42,6 +44,27 @@ pub enum Commands {
         /// Email subject
         subject: Option<String>,
     },
+    /// Reply to an email
+    Reply {
+        /// Email ID to reply to
+        id: String,
+        /// Account to reply from (optional)
+        #[arg(short, long)]
+        account: Option<String>,
+    },
+    /// Forward an email
+    Forward {
+        /// Email ID to forward
+        id: String,
+        /// Account to forward from (optional)
+        #[arg(short, long)]
+        account: Option<String>,
+    },
+    /// Draft management
+    Draft {
+        #[command(subcommand)]
+        action: DraftAction,
+    },
     /// Search emails
     Search {
         /// Search query
@@ -68,6 +91,42 @@ pub enum Commands {
         #[command(subcommand)]
         action: AccountAction,
     },
+    /// Plugin management and execution
+    Plugin {
+        #[command(subcommand)]
+        action: PluginAction,
+    },
+    /// External tool integration and piping
+    Tool {
+        #[command(subcommand)]
+        action: ToolAction,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum DraftAction {
+    /// List all drafts
+    List,
+    /// Show draft content
+    Show {
+        /// Draft ID
+        id: String,
+    },
+    /// Edit a draft
+    Edit {
+        /// Draft ID
+        id: String,
+    },
+    /// Delete a draft
+    Delete {
+        /// Draft ID
+        id: String,
+    },
+    /// Send a draft
+    Send {
+        /// Draft ID
+        id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -88,5 +147,83 @@ pub enum AccountAction {
     Test {
         /// Account name
         name: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum PluginAction {
+    /// List available plugins
+    List,
+    /// Execute a plugin command
+    Execute {
+        /// Plugin name
+        name: String,
+        /// Plugin arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Show plugin information
+    Info {
+        /// Plugin name
+        name: String,
+    },
+    /// Reload plugins from directories
+    Reload,
+}
+
+#[derive(Subcommand)]
+pub enum ToolAction {
+    /// Pipe emails to an external command
+    Pipe {
+        /// Command to execute
+        command: String,
+        /// Command arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+        /// Email IDs to pipe (comma-separated)
+        #[arg(short, long)]
+        emails: String,
+        /// Current folder context
+        #[arg(short, long)]
+        folder: Option<String>,
+    },
+    /// Execute external command without email data
+    Exec {
+        /// Command to execute
+        command: String,
+        /// Command arguments
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+        /// Current folder context
+        #[arg(short, long)]
+        folder: Option<String>,
+    },
+    /// Grep through emails
+    Grep {
+        /// Grep pattern
+        pattern: String,
+        /// Email IDs to search (comma-separated)
+        #[arg(short, long)]
+        emails: String,
+        /// Additional grep options
+        #[arg(short, long)]
+        options: Option<String>,
+    },
+    /// Process emails with awk
+    Awk {
+        /// Awk script
+        script: String,
+        /// Email IDs to process (comma-separated)
+        #[arg(short, long)]
+        emails: String,
+    },
+    /// Count lines in emails
+    Count {
+        /// Email IDs to count (comma-separated)
+        #[arg(short, long)]
+        emails: String,
+        /// Count type (lines, words, chars)
+        #[arg(short, long, default_value = "lines")]
+        count_type: String,
     },
 }

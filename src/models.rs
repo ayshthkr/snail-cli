@@ -404,7 +404,7 @@ pub struct GitCommit {
 }
 
 /// Sync operation result
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SyncResult {
     /// Number of emails fetched
     pub fetched: usize,
@@ -415,7 +415,7 @@ pub struct SyncResult {
 }
 
 /// Connection status for an account
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,
@@ -450,6 +450,174 @@ pub struct FilterScript {
     pub order: u32,
     /// Whether the script is enabled
     pub enabled: bool,
+}
+
+/// Draft email for composition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Draft {
+    /// Draft ID
+    pub id: String,
+    /// Account to send from
+    pub account: String,
+    /// Email headers
+    pub headers: HashMap<String, String>,
+    /// Email body content
+    pub body: EmailBody,
+    /// Email attachments
+    pub attachments: Vec<Attachment>,
+    /// Draft metadata
+    pub metadata: DraftMetadata,
+    /// Original email ID if this is a reply or forward
+    pub original_email_id: Option<String>,
+    /// Draft type (compose, reply, forward)
+    pub draft_type: DraftType,
+}
+
+/// Draft metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DraftMetadata {
+    /// File path in repository
+    pub file_path: String,
+    /// Creation timestamp
+    pub created_at: DateTime<Utc>,
+    /// Last modification timestamp
+    pub modified_at: DateTime<Utc>,
+    /// Auto-save interval in seconds
+    pub auto_save_interval: u64,
+    /// Last auto-save timestamp
+    pub last_auto_save: Option<DateTime<Utc>>,
+}
+
+/// Draft type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DraftType {
+    /// New email composition
+    Compose,
+    /// Reply to an email
+    Reply,
+    /// Forward an email
+    Forward,
+}
+
+impl Draft {
+    /// Create a new draft for composition
+    pub fn new_compose(account: String) -> Self {
+        let id = Uuid::new_v4().to_string();
+        Self {
+            id: id.clone(),
+            account,
+            headers: HashMap::new(),
+            body: EmailBody::default(),
+            attachments: Vec::new(),
+            metadata: DraftMetadata::new(),
+            original_email_id: None,
+            draft_type: DraftType::Compose,
+        }
+    }
+
+    /// Create a new draft for reply
+    pub fn new_reply(account: String, original_email_id: String) -> Self {
+        let id = Uuid::new_v4().to_string();
+        Self {
+            id: id.clone(),
+            account,
+            headers: HashMap::new(),
+            body: EmailBody::default(),
+            attachments: Vec::new(),
+            metadata: DraftMetadata::new(),
+            original_email_id: Some(original_email_id),
+            draft_type: DraftType::Reply,
+        }
+    }
+
+    /// Create a new draft for forward
+    pub fn new_forward(account: String, original_email_id: String) -> Self {
+        let id = Uuid::new_v4().to_string();
+        Self {
+            id: id.clone(),
+            account,
+            headers: HashMap::new(),
+            body: EmailBody::default(),
+            attachments: Vec::new(),
+            metadata: DraftMetadata::new(),
+            original_email_id: Some(original_email_id),
+            draft_type: DraftType::Forward,
+        }
+    }
+
+    /// Convert draft to email for sending
+    pub fn to_email(&self) -> Email {
+        let mut email = Email::new(self.account.clone());
+        email.id = self.id.clone();
+        email.headers = self.headers.clone();
+        email.body = self.body.clone();
+        email.attachments = self.attachments.clone();
+        email
+    }
+
+    /// Validate draft structure
+    pub fn validate(&self) -> Result<(), String> {
+        if self.id.is_empty() {
+            return Err("Draft ID cannot be empty".to_string());
+        }
+
+        if self.account.is_empty() {
+            return Err("Account cannot be empty".to_string());
+        }
+
+        self.body.validate()?;
+
+        for attachment in &self.attachments {
+            attachment.validate()?;
+        }
+
+        self.metadata.validate()?;
+
+        Ok(())
+    }
+
+    /// Check if draft needs auto-save
+    pub fn needs_auto_save(&self) -> bool {
+        if let Some(last_save) = self.metadata.last_auto_save {
+            let elapsed = Utc::now().signed_duration_since(last_save);
+            elapsed.num_seconds() >= self.metadata.auto_save_interval as i64
+        } else {
+            true // Never saved, needs save
+        }
+    }
+
+    /// Mark draft as auto-saved
+    pub fn mark_auto_saved(&mut self) {
+        self.metadata.last_auto_save = Some(Utc::now());
+        self.metadata.modified_at = Utc::now();
+    }
+}
+
+impl DraftMetadata {
+    /// Create new draft metadata with current timestamp
+    pub fn new() -> Self {
+        let now = Utc::now();
+        Self {
+            file_path: String::new(),
+            created_at: now,
+            modified_at: now,
+            auto_save_interval: 30, // Auto-save every 30 seconds by default
+            last_auto_save: None,
+        }
+    }
+
+    /// Validate draft metadata
+    pub fn validate(&self) -> Result<(), String> {
+        if self.created_at > self.modified_at {
+            return Err("Created timestamp cannot be after modified timestamp".to_string());
+        }
+
+        if self.auto_save_interval == 0 {
+            return Err("Auto-save interval must be greater than 0".to_string());
+        }
+
+        Ok(())
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -893,6 +1061,154 @@ mod tests {
         assert_eq!(
             account.outgoing.server,
             deserialized_account.outgoing.server
+        );
+    }
+
+    #[test]
+    fn test_draft_creation() {
+        let draft = Draft::new_compose("test@example.com".to_string());
+
+        assert!(!draft.id.is_empty());
+        assert_eq!(draft.account, "test@example.com");
+        assert_eq!(draft.draft_type, DraftType::Compose);
+        assert!(draft.original_email_id.is_none());
+        assert_eq!(draft.body.content_type, "text/plain");
+        assert_eq!(draft.metadata.auto_save_interval, 30);
+    }
+
+    #[test]
+    fn test_draft_reply_creation() {
+        let original_id = "original-email-123".to_string();
+        let draft = Draft::new_reply("test@example.com".to_string(), original_id.clone());
+
+        assert!(!draft.id.is_empty());
+        assert_eq!(draft.account, "test@example.com");
+        assert_eq!(draft.draft_type, DraftType::Reply);
+        assert_eq!(draft.original_email_id, Some(original_id));
+    }
+
+    #[test]
+    fn test_draft_forward_creation() {
+        let original_id = "original-email-456".to_string();
+        let draft = Draft::new_forward("test@example.com".to_string(), original_id.clone());
+
+        assert!(!draft.id.is_empty());
+        assert_eq!(draft.account, "test@example.com");
+        assert_eq!(draft.draft_type, DraftType::Forward);
+        assert_eq!(draft.original_email_id, Some(original_id));
+    }
+
+    #[test]
+    fn test_draft_validation_success() {
+        let draft = Draft::new_compose("test@example.com".to_string());
+        assert!(draft.validate().is_ok());
+    }
+
+    #[test]
+    fn test_draft_validation_empty_id() {
+        let mut draft = Draft::new_compose("test@example.com".to_string());
+        draft.id = String::new();
+
+        let result = draft.validate();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Draft ID cannot be empty");
+    }
+
+    #[test]
+    fn test_draft_validation_empty_account() {
+        let mut draft = Draft::new_compose("test@example.com".to_string());
+        draft.account = String::new();
+
+        let result = draft.validate();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Account cannot be empty");
+    }
+
+    #[test]
+    fn test_draft_to_email_conversion() {
+        let mut draft = Draft::new_compose("test@example.com".to_string());
+        draft
+            .headers
+            .insert("To".to_string(), "recipient@example.com".to_string());
+        draft
+            .headers
+            .insert("Subject".to_string(), "Test Subject".to_string());
+        draft.body.content = "Test email content".to_string();
+
+        let email = draft.to_email();
+
+        assert_eq!(email.id, draft.id);
+        assert_eq!(email.account, draft.account);
+        assert_eq!(email.headers, draft.headers);
+        assert_eq!(email.body.content, draft.body.content);
+    }
+
+    #[test]
+    fn test_draft_auto_save_logic() {
+        let mut draft = Draft::new_compose("test@example.com".to_string());
+
+        // Initially needs auto-save (never saved)
+        assert!(draft.needs_auto_save());
+
+        // Mark as auto-saved
+        draft.mark_auto_saved();
+        assert!(!draft.needs_auto_save());
+        assert!(draft.metadata.last_auto_save.is_some());
+
+        // Simulate time passing beyond auto-save interval
+        draft.metadata.auto_save_interval = 1; // 1 second
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        assert!(draft.needs_auto_save());
+    }
+
+    #[test]
+    fn test_draft_metadata_validation_success() {
+        let metadata = DraftMetadata::new();
+        assert!(metadata.validate().is_ok());
+    }
+
+    #[test]
+    fn test_draft_metadata_validation_zero_interval() {
+        let mut metadata = DraftMetadata::new();
+        metadata.auto_save_interval = 0;
+
+        let result = metadata.validate();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Auto-save interval must be greater than 0"
+        );
+    }
+
+    #[test]
+    fn test_draft_metadata_validation_invalid_timestamps() {
+        let mut metadata = DraftMetadata::new();
+        metadata.created_at = Utc::now();
+        metadata.modified_at = metadata.created_at - chrono::Duration::hours(1);
+
+        let result = metadata.validate();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Created timestamp cannot be after modified timestamp"
+        );
+    }
+
+    #[test]
+    fn test_draft_serialization() {
+        let draft = Draft::new_compose("test@example.com".to_string());
+
+        // Test JSON serialization
+        let json = serde_json::to_string(&draft).expect("Failed to serialize draft to JSON");
+        let deserialized_draft: Draft =
+            serde_json::from_str(&json).expect("Failed to deserialize draft from JSON");
+
+        assert_eq!(draft.id, deserialized_draft.id);
+        assert_eq!(draft.account, deserialized_draft.account);
+        assert_eq!(draft.draft_type, deserialized_draft.draft_type);
+        assert_eq!(
+            draft.original_email_id,
+            deserialized_draft.original_email_id
         );
     }
 }

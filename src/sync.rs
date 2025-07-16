@@ -1282,6 +1282,69 @@ impl SyncEngine for DefaultSyncEngine {
         imap_client.check_connection(account)
     }
 }
+
+/// Mock sync engine for testing
+#[cfg(test)]
+pub struct MockSyncEngine {
+    /// Simulated emails to return
+    pub mock_emails: Arc<Mutex<Vec<Email>>>,
+    /// Simulated connection status
+    pub mock_status: Arc<Mutex<ConnectionStatus>>,
+    /// Track sent emails
+    pub sent_emails: Arc<Mutex<Vec<Email>>>,
+}
+
+#[cfg(test)]
+impl MockSyncEngine {
+    pub fn new() -> Self {
+        Self {
+            mock_emails: Arc::new(Mutex::new(Vec::new())),
+            mock_status: Arc::new(Mutex::new(ConnectionStatus::Connected)),
+            sent_emails: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    pub async fn set_mock_emails(&self, emails: Vec<Email>) {
+        let mut mock_emails = self.mock_emails.lock().await;
+        *mock_emails = emails;
+    }
+
+    pub async fn set_mock_status(&self, status: ConnectionStatus) {
+        let mut mock_status = self.mock_status.lock().await;
+        *mock_status = status;
+    }
+
+    pub async fn get_sent_emails(&self) -> Vec<Email> {
+        self.sent_emails.lock().await.clone()
+    }
+}
+
+#[cfg(test)]
+impl SyncEngine for MockSyncEngine {
+    async fn fetch_emails(&self, _account: &Account) -> Result<Vec<Email>> {
+        Ok(self.mock_emails.lock().await.clone())
+    }
+
+    async fn send_email(&self, email: &Email, _account: &Account) -> Result<()> {
+        self.sent_emails.lock().await.push(email.clone());
+        Ok(())
+    }
+
+    async fn sync_account(&self, account: &Account) -> Result<SyncResult> {
+        let emails = self.fetch_emails(account).await?;
+        Ok(SyncResult {
+            fetched: emails.len(),
+            sent: 0,
+            errors: Vec::new(),
+        })
+    }
+
+    async fn get_account_status(&self, _account: &Account) -> Result<ConnectionStatus> {
+        let status = self.mock_status.lock().await;
+        Ok(status.clone())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

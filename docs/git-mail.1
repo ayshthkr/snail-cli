@@ -1,0 +1,273 @@
+.TH GIT-MAIL 1 "2024" "git-mail 0.1.0" "User Commands"
+.SH NAME
+git-mail \- Terminal-based, offline-first email client using Git storage
+.SH SYNOPSIS
+.B git-mail
+[\fIOPTIONS\fR] \fICOMMAND\fR [\fIARGS\fR]
+.SH DESCRIPTION
+.B git-mail
+is a terminal-based email client that stores emails as plain-text files in a Git repository. It treats email management like code development - versioned, scriptable, and portable. Each email is stored as an individual file, and all operations are performed using shell scripts and command-line tools.
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose logging output
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Specify configuration file path (default: ~/.git-mail/config.toml)
+.TP
+.BR \-r ", " \-\-repo " " \fIPATH\fR
+Specify repository path (default: ~/.git-mail)
+.TP
+.BR \-h ", " \-\-help
+Print help information
+.TP
+.BR \-V ", " \-\-version
+Print version information
+.SH COMMANDS
+.SS Repository Management
+.TP
+.B init [\fIPATH\fR]
+Initialize a new Git-Mail repository. Creates the directory structure, Git repository, and default configuration files.
+.SS Interactive Interface
+.TP
+.B tui
+Start the terminal user interface for interactive email management. Provides a full-screen interface with keyboard navigation.
+.SS Email Operations
+.TP
+.B sync [\fIACCOUNT\fR]
+Synchronize emails with configured accounts. Fetches new emails and sends queued outbound messages.
+.TP
+.B compose [\fB--to\fR \fIEMAIL\fR] [\fB--subject\fR \fISUBJECT\fR]
+Compose a new email using your configured text editor.
+.TP
+.B reply \fIEMAIL_ID\fR [\fB--account\fR \fIACCOUNT\fR]
+Reply to an existing email with quoted content and proper threading.
+.TP
+.B forward \fIEMAIL_ID\fR [\fB--account\fR \fIACCOUNT\fR]
+Forward an email to other recipients, preserving attachments.
+.SS Email Browsing
+.TP
+.B list [\fIFOLDER\fR] [\fB--count\fR \fIN\fR]
+List emails in a folder with summary information (sender, subject, date).
+.TP
+.B show \fIEMAIL_ID\fR
+Display the full content of an email including headers and body.
+.TP
+.B search \fIQUERY\fR [\fB--folder\fR \fIFOLDER\fR]
+Search through emails using grep-based pattern matching.
+.SS Draft Management
+.TP
+.B draft list
+List all draft emails
+.TP
+.B draft show \fIID\fR
+Display draft content
+.TP
+.B draft edit \fIID\fR
+Edit a draft in your text editor
+.TP
+.B draft send \fIID\fR
+Send a draft email
+.TP
+.B draft delete \fIID\fR
+Delete a draft email
+.SS Account Management
+.TP
+.B account list
+List all configured email accounts
+.TP
+.B account add \fINAME\fR
+Add a new email account with interactive setup
+.TP
+.B account remove \fINAME\fR
+Remove an email account and its configuration
+.TP
+.B account test \fINAME\fR
+Test connection to an email account
+.SS Plugin System
+.TP
+.B plugin list
+List available plugins
+.TP
+.B plugin execute \fINAME\fR [\fIARGS\fR...]
+Execute a plugin with optional arguments
+.TP
+.B plugin info \fINAME\fR
+Show detailed information about a plugin
+.TP
+.B plugin reload
+Reload plugins from plugin directories
+.SS External Tools
+.TP
+.B tool pipe \fICOMMAND\fR [\fIARGS\fR...] \fB--emails\fR \fIIDS\fR
+Pipe email content to an external command
+.TP
+.B tool grep \fIPATTERN\fR \fB--emails\fR \fIIDS\fR
+Search through specified emails using grep
+.TP
+.B tool awk \fISCRIPT\fR \fB--emails\fR \fIIDS\fR
+Process emails using awk scripts
+.TP
+.B tool count \fB--emails\fR \fIIDS\fR [\fB--count-type\fR \fITYPE\fR]
+Count lines, words, or characters in emails
+.SH EXAMPLES
+.SS Getting Started
+Initialize a new repository:
+.RS
+.B git-mail init
+.RE
+
+Add your first email account:
+.RS
+.B git-mail account add personal
+.RE
+
+Sync your emails:
+.RS
+.B git-mail sync
+.RE
+
+Start the interactive interface:
+.RS
+.B git-mail tui
+.RE
+
+.SS Email Management
+List emails in inbox:
+.RS
+.B git-mail list
+.RE
+
+Show a specific email:
+.RS
+.B git-mail show abc123def
+.RE
+
+Compose a new email:
+.RS
+.B git-mail compose --to colleague@company.com --subject "Meeting Tomorrow"
+.RE
+
+Reply to an email:
+.RS
+.B git-mail reply abc123def
+.RE
+
+Search for emails:
+.RS
+.B git-mail search "project deadline"
+.RE
+
+.SS Advanced Usage
+Search in specific folder:
+.RS
+.B git-mail search "urgent" --folder work
+.RE
+
+Pipe emails to external tools:
+.RS
+.B git-mail tool pipe sort --emails abc123,def456
+.RE
+
+Execute custom plugins:
+.RS
+.B git-mail plugin execute backup --full
+.RE
+
+.SH CONFIGURATION
+Git-Mail uses TOML configuration files located in the repository directory:
+
+.TP
+.B config.toml
+Main configuration file containing global settings
+.TP
+.B accounts/
+Directory containing individual account configurations
+.TP
+.B filters/
+Directory containing email filter scripts
+.TP
+.B plugins/
+Directory containing custom plugin scripts
+
+.SH REPOSITORY STRUCTURE
+Git-Mail organizes emails in a structured directory layout:
+
+.TP
+.B inbox/
+Incoming emails organized by date
+.TP
+.B sent/
+Sent emails organized by date
+.TP
+.B drafts/
+Draft emails being composed
+.TP
+.B archive/
+Archived emails
+.TP
+.B [custom-folders]/
+User-created organizational folders
+
+Each email is stored as a plain-text file with RFC 2822 formatting, and all changes are tracked in Git history.
+
+.SH ENVIRONMENT VARIABLES
+.TP
+.B EDITOR
+Text editor used for composing emails (default: vi)
+.TP
+.B GIT_MAIL_HOME
+Override default repository location
+.TP
+.B GIT_MAIL_CONFIG
+Override default configuration file location
+
+.SH FILES
+.TP
+.B ~/.git-mail/
+Default repository and configuration directory
+.TP
+.B ~/.git-mail/config.toml
+Main configuration file
+.TP
+.B ~/.git-mail/accounts/
+Account configuration directory
+.TP
+.B ~/.git-mail/filters/
+Email filter scripts directory
+.TP
+.B ~/.git-mail/plugins/
+Custom plugin scripts directory
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error
+.TP
+.B 2
+Configuration error
+.TP
+.B 3
+Network error
+.TP
+.B 4
+Authentication error
+
+.SH BUGS
+Report bugs to the project repository or mailing list.
+
+.SH AUTHOR
+Git-Mail development team
+
+.SH SEE ALSO
+.BR git (1),
+.BR mutt (1),
+.BR alpine (1),
+.BR grep (1),
+.BR awk (1)
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions.

@@ -42,6 +42,7 @@ pub trait GitStorage {
 }
 
 /// Default Git storage implementation
+#[derive(Clone)]
 pub struct DefaultGitStorage {
     repository_path: String,
 }
@@ -86,7 +87,12 @@ impl DefaultGitStorage {
             .take(30)
             .collect::<String>();
 
-        let filename = format!("msg-{}-{}-{}.txt", &email.id[..8], sender, subject);
+        let id_prefix = if email.id.len() >= 8 {
+            &email.id[..8]
+        } else {
+            &email.id
+        };
+        let filename = format!("msg-{}-{}-{}.txt", id_prefix, sender, subject);
 
         Path::new(&self.repository_path)
             .join(&email.metadata.folder)
@@ -708,10 +714,11 @@ impl GitStorage for DefaultGitStorage {
 
     fn retrieve_email(&self, id: &str) -> Result<Email> {
         // Search for email file by ID
+        let id_prefix = if id.len() >= 8 { &id[..8] } else { id };
         let email_metadata = self
             .list_emails(None)?
             .into_iter()
-            .find(|meta| meta.file_path.contains(&id[..8]))
+            .find(|meta| meta.file_path.contains(id_prefix))
             .ok_or_else(|| GitMailError::EmailNotFound(id.to_string()))?;
 
         // Read email file
@@ -783,10 +790,15 @@ impl GitStorage for DefaultGitStorage {
         let repo = self.open_repository()?;
 
         // Find the email file path first
+        let id_prefix = if email_id.len() >= 8 {
+            &email_id[..8]
+        } else {
+            email_id
+        };
         let email_metadata = self
             .list_emails(None)?
             .into_iter()
-            .find(|meta| meta.file_path.contains(&email_id[..8]))
+            .find(|meta| meta.file_path.contains(id_prefix))
             .ok_or_else(|| GitMailError::EmailNotFound(email_id.to_string()))?;
 
         // Get relative path from repository root
