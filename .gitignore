@@ -1,0 +1,56 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool
+*.coverprofile
+
+# Go build cache, modules, and workspace files
+/bin/
+/build/
+/dist/
+*.log
+
+# Dependency directories (remove the ones you're not using)
+/vendor/
+/Godeps/
+
+# IDE/editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# Go modules
+go.sum
+
+# Uncomment if you don't want to commit `go.sum` (optional)
+# go.sum
+
+# If using Go workspace (1.18+)
+*.code-workspace
+
+# Logs
+*.log
+
+.kiro
+tests
+
+# Test data
+testdata/
+
+# Coverage data
+*.cov
+coverage.out
+
