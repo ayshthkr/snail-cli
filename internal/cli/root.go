@@ -2,14 +2,19 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 	"snail-cli/internal/config"
+	"snail-cli/internal/interfaces"
 )
 
 var (
 	cfgFile string
 	cfg     *config.Config
+	output  io.Writer = os.Stdout
+	input   io.Reader = os.Stdin
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -77,4 +82,122 @@ func GetConfig() *config.Config {
 		initConfig()
 	}
 	return cfg
+}
+
+// CLI implementation that satisfies the interfaces.CLI interface
+type CLI struct {
+	rootCmd *cobra.Command
+	output  io.Writer
+	input   io.Reader
+}
+
+// NewCLI creates a new CLI instance
+func NewCLI() *CLI {
+	return &CLI{
+		rootCmd: rootCmd,
+		output:  output,
+		input:   input,
+	}
+}
+
+// Execute runs the CLI with the given arguments
+func (c *CLI) Execute(args []string) error {
+	c.rootCmd.SetArgs(args)
+	c.rootCmd.SetOut(c.output)
+	c.rootCmd.SetIn(c.input)
+	return c.rootCmd.Execute()
+}
+
+// SetOutput sets the output writer for CLI commands
+func (c *CLI) SetOutput(out io.Writer) {
+	c.output = out
+	c.rootCmd.SetOut(out)
+}
+
+// SetInput sets the input reader for CLI commands
+func (c *CLI) SetInput(in io.Reader) {
+	c.input = in
+	c.rootCmd.SetIn(in)
+}
+
+// AddCommand registers a new command (placeholder for interface compliance)
+func (c *CLI) AddCommand(cmd interfaces.Command) error {
+	// This would need to be implemented to convert interfaces.Command to cobra.Command
+	return fmt.Errorf("AddCommand not implemented yet")
+}
+
+// GetCommand returns a command by name (placeholder for interface compliance)
+func (c *CLI) GetCommand(name string) (interfaces.Command, error) {
+	// This would need to be implemented to find and return commands
+	return nil, fmt.Errorf("GetCommand not implemented yet")
+}
+
+// ListCommands returns all available commands (placeholder for interface compliance)
+func (c *CLI) ListCommands() []interfaces.Command {
+	// This would need to be implemented to return all commands
+	return []interfaces.Command{}
+}
+
+// ValidateArgs validates command arguments with helpful error messages
+func ValidateArgs(cmd *cobra.Command, args []string, expectedCount int) error {
+	if len(args) != expectedCount {
+		if expectedCount == 0 {
+			return fmt.Errorf("command '%s' does not accept any arguments, got %d", cmd.Name(), len(args))
+		} else if expectedCount == 1 {
+			return fmt.Errorf("command '%s' requires exactly 1 argument, got %d", cmd.Name(), len(args))
+		} else {
+			return fmt.Errorf("command '%s' requires exactly %d arguments, got %d", cmd.Name(), expectedCount, len(args))
+		}
+	}
+	return nil
+}
+
+// ValidateMinArgs validates minimum number of arguments
+func ValidateMinArgs(cmd *cobra.Command, args []string, minCount int) error {
+	if len(args) < minCount {
+		if minCount == 1 {
+			return fmt.Errorf("command '%s' requires at least 1 argument, got %d", cmd.Name(), len(args))
+		} else {
+			return fmt.Errorf("command '%s' requires at least %d arguments, got %d", cmd.Name(), minCount, len(args))
+		}
+	}
+	return nil
+}
+
+// ValidateRangeArgs validates argument count within a range
+func ValidateRangeArgs(cmd *cobra.Command, args []string, minCount, maxCount int) error {
+	if len(args) < minCount || len(args) > maxCount {
+		if minCount == maxCount {
+			return ValidateArgs(cmd, args, minCount)
+		}
+		return fmt.Errorf("command '%s' requires between %d and %d arguments, got %d", cmd.Name(), minCount, maxCount, len(args))
+	}
+	return nil
+}
+
+// GetOutputFormat returns the output format from flags
+func GetOutputFormat(cmd *cobra.Command) interfaces.OutputFormat {
+	format, _ := cmd.Flags().GetString("format")
+	switch format {
+	case "json":
+		return interfaces.FormatJSON
+	case "plain":
+		return interfaces.FormatPlain
+	case "csv":
+		return interfaces.FormatCSV
+	default:
+		return interfaces.FormatTable
+	}
+}
+
+// IsOfflineMode returns true if offline mode is enabled
+func IsOfflineMode(cmd *cobra.Command) bool {
+	offline, _ := cmd.Flags().GetBool("offline")
+	return offline
+}
+
+// IsVerbose returns true if verbose output is enabled
+func IsVerbose(cmd *cobra.Command) bool {
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	return verbose
 }

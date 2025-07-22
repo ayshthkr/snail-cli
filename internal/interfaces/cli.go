@@ -50,10 +50,10 @@ type Command interface {
 // OutputFormatter defines the interface for formatting output
 type OutputFormatter interface {
 	// FormatEmail formats an email for display
-	FormatEmail(email *Email, format OutputFormat) (string, error)
+	FormatEmail(email interface{}, format OutputFormat) (string, error)
 	
 	// FormatEmailList formats a list of emails for display
-	FormatEmailList(emails []*Email, format OutputFormat) (string, error)
+	FormatEmailList(emails interface{}, format OutputFormat) (string, error)
 	
 	// FormatSyncStatus formats sync status for display
 	FormatSyncStatus(status *SyncStatus, format OutputFormat) (string, error)
