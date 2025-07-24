@@ -14,7 +14,7 @@ type FilterEngine interface {
 	UnregisterFilter(name string) error
 	
 	// ProcessEmail applies all applicable filters to an email
-	ProcessEmail(ctx context.Context, email *Email, event FilterEvent) (*FilterResult, error)
+	ProcessEmail(ctx context.Context, email interface{}, event FilterEvent) (*FilterResult, error)
 	
 	// ListFilters returns all registered filters
 	ListFilters() []Filter
